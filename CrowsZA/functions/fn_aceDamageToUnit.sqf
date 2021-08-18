@@ -21,10 +21,10 @@ private _fnc_errorAndClose = {
 // check if something is selected and only infantry is selected
 switch (false) do {
     case !(isNull _unit): {
-        ["Nothing Selected for ACE Damage"] call _fnc_errorAndClose;
+        ["CrowsZA-AceDamage: Nothing Selected for ACE Damage"] call _fnc_errorAndClose;
     };
     case (_unit isKindOf "CAManBase"): {
-        ["Only allowed to pick infantry for ACE Damage"] call _fnc_errorAndClose;
+        ["CrowsZA-AceDamage: Only allowed to pick infantry for ACE Damage"] call _fnc_errorAndClose;
     };
 };
 
@@ -44,7 +44,7 @@ private _onConfirm =
 	if (isNull _unit) exitWith { _return; };
 
 	//log it
-	diag_log format ["CrowsZA-AceDamage: Zeus applying %1 dmg to %2 limb with type %3 on unit %4", _dmg, _bodypart, _dmgType, _unit];
+	diag_log format ["CrowsZA-AceDamage: Zeus applying %1 dmg to %2 limb with type %3 on unit %4", _dmg, _bodypart, _dmgType, name _unit];
 
 	//force to be in this limb, even if non-specific damage type
 	// represents all incoming damage for selecting a non-selection Specific wound location, (used for selectRandomWeighted [value1,weight1,value2....])
@@ -83,8 +83,8 @@ private _onConfirm =
 		};
 	};
 
-	//apply ACE dmg as ZEN SLider is a number
-	[_unit, _dmg, _bodyPart, _dmgType, _unit, _damageSelectionArray] call ace_medical_fnc_addDamageToUnit;
+	//apply ACE dmg as ZEN SLider is a number. Using remoteExec as it needs to be run where the unit is local
+	[_unit, _dmg, _bodyPart, _dmgType, _unit, _damageSelectionArray] remoteExec ["ace_medical_fnc_addDamageToUnit", _unit];
 };
 [
 	"Add ACE Damage to Unit", 

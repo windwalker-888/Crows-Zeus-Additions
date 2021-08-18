@@ -24,7 +24,7 @@ private _hideSubTypes = [];
 //TREES
 if (_treeRemoval) then {
 	_hideMainTypes append ["TREE", "SMALL TREE"];
-	_hideSubTypes append ["stump", "fallen"];
+	_hideSubTypes append ["stump", "fallen", "misc_stubleafs_pmc","t_piceaabies_1f","kmen_1_buk","misc_stub2"];
 };
 //BUSHES
 if (_bushRemoval) then {
@@ -37,7 +37,7 @@ if (_stoneRemoval) then {
 
 // these are the main classes of objects, only run if we have at least one selected, as it otherwise removes everything
 if (count _hideMainTypes > 0) then {
-	{ _hideTObjs pushBack _x } foreach (nearestTerrainObjects [_posAGL,_hideMainTypes,_radius]);
+	{ _hideTObjs pushBack _x } foreach (nearestTerrainObjects [_posAGL,_hideMainTypes,_radius, false, true]); //enable 2d mode
 };
 
 // but there are some other model names (unclassified) that we should clean up too
@@ -48,7 +48,7 @@ if (count _hideMainTypes > 0) then {
 		_hideTObjs pushBack _x;
 	};
 
-} foreach (nearestTerrainObjects [_posAGL,[],_radius]);
+} foreach (nearestTerrainObjects [_posAGL,[],_radius, false, true]);
 
 //log
 diag_log format["crowsZA-removeTrees: Hiding %1 objects", count _hideTObjs];
