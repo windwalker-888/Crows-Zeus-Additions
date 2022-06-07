@@ -4,6 +4,7 @@ class CrowsZA_addon
 	class CrowsZeusAdditions
 	{
 		file = "\CrowsZA\functions";
+		class registerSettingsCBA { preInit = 1; };
 		class zeusRegister { postInit = 1; };
 
 		class showHint {};
@@ -53,10 +54,14 @@ class CrowsZA_addon
 		class loadoutRefresh {};
 
 		class radiusHeal {};
+		class radiusHealDialog {};
 
-		class setRearmVehicle {};
+		class setSupplyVehicle {};
 		
 		class fireSupport {};
+
+		class resupplyPlayerLoadouts {};
+		class spawnSupplyDrop {};
 
 		// draw building and helper functions
 		class getPosFromMouse {};
@@ -66,5 +71,18 @@ class CrowsZA_addon
 
 		// TFAR related 
 		class tfarSetVehicleSide {};
+
+		// jshk heal for ACE while its broken
+		class jshkHeal {};
+		class isAliveManUnit {};
+
+		// PINGBOX 
+		class enablePingBoxHUD {};
+		class disablePingBoxHUD {};
+		class refreshPingBoxHUD {};
+		class addEntryPingBoxHUD {};
+
+		// Remove Radio/Bino
+		class removeRadioBino {};
 	};
 };

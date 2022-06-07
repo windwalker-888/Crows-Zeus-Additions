@@ -8,7 +8,7 @@ Return: none
 Creates an animal that follows the source while it is alive
 
 *///////////////////////////////////////////////
-params ["_animalType", "_src", "_amount", "_invincible"];
+params ["_animalType", "_src", "_amount", "_invincible", "_offset", "_scale", "_attack"];
 private["_animalClassname", "_animalResponse", "_animalAceOffset"]; 
 
 // set correct class names
@@ -34,9 +34,17 @@ crowsZA_fnc_addAceActionPetDog =
 	[_animal, 0, [], _action] call ace_interact_menu_fnc_addActionToObject;
 };
 
-for "_x" from 1 to _amount do {
+// get offset where to spawn
+private _pos = getPosATL _src;
+if (_offset != 0) then {
+	// random direction
+	private _direction = (random 7) * 45;
+	_pos = _pos getPos [_offset, _direction];
+};
+
+for "_x" from 1 to round _amount do {
 	// spawn animal
-	_animal = createAgent [_animalClassname, getPos _src, [], 5, "CAN_COLLIDE"]; 
+	_animal = createAgent [_animalClassname, _pos, [], 5, "CAN_COLLIDE"]; 
 	_animal setVariable ["BIS_fnc_animalBehaviour_disable", true]; 
 
 	//set invincible if param is chosen 
@@ -55,12 +63,26 @@ for "_x" from 1 to _amount do {
 		[[_animal, _animalType, _animalResponse, _animalAceOffset], crowsZA_fnc_addAceActionPetDog] remoteExec ["call", [ 0, -2 ] select isDedicated, true];
 	};
 
+	// scale it if != 1. first spawn object to attach to
+	if (_scale != 1) then {
+		private _spawnedScaleFunc = [_scale, _animal] spawn {
+			params ["_scale", "_animal"];
+
+			private _scaleObj = createVehicle ["Land_Can_V2_F", getPos _animal, [], 5, "CAN_COLLIDE"];
+			_animal attachTo [_scaleObj, [0,0,0]]; 
+			_animal setObjectScale _scale;
+			sleep 0.1;
+			deleteVehicle _scaleObj;
+		};
+	};
+
+
 	//log it
 	diag_log format["CrowZA:animalFollow: Zeus has spawned a %1 to follow %2", _animalType, _src];
 
 	// spawn thread that handle behaviour
-	nul = [_src, _animal, _animalType] spawn { 
-		params["_src", "_animal", "_animalType"]; 
+	[_src, _animal, _animalType, _attack] spawn { 
+		params["_src", "_animal", "_animalType", "_attack"]; 
 		_animalGoMove = _animalType + "_Run"; _animalIdleMove = _animalType + "_Idle_Stop"; 
 
 		if ( _animalType == "Dog" ) then { _animalGoMove = "Dog_Sprint"; }; 
@@ -68,12 +90,16 @@ for "_x" from 1 to _amount do {
 		if ( _animalType == "Hen" ) then { _animalGoMove = "Hen_Walk"; }; 
 		if ( _animalType == "Snake" ) then { _animalGoMove = "Snakes_Move"; }; 
 
-		_animalMoving = true; 
-		_moveDist = 5; 
+		_moveDist = 3; 
+		_animalMoving = false; 
+		// init idle
+		_animal playMove _animalIdleMove;
+		sleep 0.2;
+
 		//consider stopping run loop if source dies... I assume it would mean all the animals just stop and look at the corpse?
-		while {alive _animal || alive _src} do 
+		while {alive _animal} do 
 		{ 
-			if (_animal distance _src > _moveDist) then 
+			if ((_animal distance _src) > _moveDist) then 
 			{ 
 				if ( !_animalMoving ) then { _animal playMove _animalGoMove; _animalMoving = true; }; 
 			}
@@ -85,8 +111,56 @@ for "_x" from 1 to _amount do {
 				}; 
 			}; 
 
-			if ( _animalMoving ) then { _animal moveTo getPos _src; }; 
-			sleep 0.5; 
+			if ( _animalMoving ) then { _animal moveto getPos _src; }; 
+
+			// if attack, get closest unit and attack it
+			if (_attack) then {
+				private _closestUnits = nearestObjects [_animal, ["CAManBase"], 1];
+				private _attackUnit = objNull;
+				{
+					if (alive _x) exitWith {_attackUnit = _x};
+				} forEach _closestUnits;
+
+				// only attack if we got target
+				if (isNull _attackUnit) exitWith {};
+
+				// if ace, do ace damage, otherwise to basegame damage 
+				if (crowsZA_common_aceModLoaded) then {
+					private _damageSelectionArray = [
+						0, 0, 1, 0, 2, 0, 
+						3, 0, 4, 0, 5, 0
+					];
+					private _bodyPart = selectRandom ["leg_l", "leg_r", "hand_l", "hand_r", "body"];
+					switch (_bodyPart) do {
+						case "body": {
+							_damageSelectionArray set [3, 1];
+						};
+						case "hand_l": {
+							_damageSelectionArray set [5, 1];
+						};
+						case "hand_r": {
+							_damageSelectionArray set [7, 1];
+						};
+						case "leg_l": {
+							_damageSelectionArray set [9, 1];
+						};
+						case "leg_r": {
+							_damageSelectionArray set [11, 1];
+						};
+					};
+
+					// ace damage, legs, bite
+					[_attackUnit, 0.4, _bodyPart, "bite", _animal, _damageSelectionArray] remoteExec ["ace_medical_fnc_addDamageToUnit", _attackUnit];
+				} else {
+					// base game
+					private _currDmg = damage _attackUnit;
+					_attackUnit setDamage (_currDmg + 0.1);
+				};
+				private _soundHurt = selectRandom 	["A3\Sounds_F\characters\human-sfx\P03\Hit_Low_1.wss", "A3\Sounds_F\characters\human-sfx\P03\Hit_Low_2.wss", "A3\Sounds_F\characters\human-sfx\P03\Hit_Low_3.wss", 
+													"A3\Sounds_F\characters\human-sfx\P02\Low_hit_1.wss", "A3\Sounds_F\characters\human-sfx\P02\Low_hit_2.wss", "A3\Sounds_F\characters\human-sfx\P02\Low_hit_3.wss", "A3\Sounds_F\characters\human-sfx\P02\Low_hit_4.wss"];
+				playSound3D [_soundHurt, _attackUnit, false];
+			};
+			sleep 0.4; 
 		};
 	};  
 };
